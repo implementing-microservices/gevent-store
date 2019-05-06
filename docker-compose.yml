@@ -1,0 +1,23 @@
+version: '3.4'
+
+services:
+  ms-demo-golang:
+    container_name: ms-demo-golang
+    labels:
+      - "traefik.backend=ms-demo-golang"
+      - "traefik.frontend.rule=PathPrefixStrip: /demogo"
+    user: root # avoids ton of volume mounting headaches in dev mode.
+    build: 
+      context: .
+      target: builder
+    volumes:
+      - .:/app
+    ports:
+      - 3737
+      # - 3738 # health check endpoint
+    environment:
+      - APP_ENV=development
+    command: reflex -c reflex.conf
+
+# @see: https://github.com/pilu/fresh
+# @alt @see: https://github.com/codegangsta/gin
