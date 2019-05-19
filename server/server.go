@@ -1,13 +1,27 @@
 package server
 
 import (
+	"app/db"
 	"app/events"
 	"fmt"
 	"net/http"
 	"os"
 
 	gin "github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	// Make sure our database is ready for us
+	tableName := db.EventsTableName
+	if db.CheckTableExists(tableName) {
+		log.Info("Events table `", tableName, "` does exist!!!")
+	} else {
+		log.Info("Events table `", tableName, "` is missing!!!")
+		log.Info("Creating the table")
+		db.CreateEventsTable()
+	}
+}
 
 /**
  * StartServer is the main entrance into the server.

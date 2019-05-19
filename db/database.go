@@ -1,7 +1,9 @@
 package db
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -11,35 +13,175 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	dynamosession   *session.Session
+	EventsTableName string
+)
+
+/**
+* Initialize package variables
+ */
+func init() {
+	EventsTableName = os.Getenv("DYNAMO_EVENTS_TABLE_NAME")
+	if EventsTableName == "" {
+		EventsTableName = "events"
+		log.Warning("Events table name missing from environment, defaulting to ", EventsTableName)
+	}
+}
+
+/**
+* Get a dynamoDB connection
+ */
 func GetDb() *dynamodb.DynamoDB {
 
-	log.Info("Acquiring database connection…")
+	if dynamosession == nil {
+		log.Info("Acquiring database connection…")
 
-	dynamoURL := os.Getenv("DYNAMO_URL")
-	if dynamoURL == "" {
-		dynamoURL = "http://0.0.0.0:8242"
-		log.Warn("WARNING: no dynamo_url in the environment. Defaulting to ", dynamoURL)
+		dynamoURL := os.Getenv("DYNAMO_URL")
+		if dynamoURL == "" {
+			dynamoURL = "http://0.0.0.0:8242"
+			log.Warn("WARNING: no dynamo_url in the environment. Defaulting to ", dynamoURL)
+		}
+
+		dynamoRegion := os.Getenv("DYNAMO_REGION")
+		if dynamoRegion == "" {
+			dynamoRegion = "us-east-1"
+			log.Warn("WARNING: no dynamo_region in the environment. Defaulting to ", dynamoURL)
+		}
+
+		config := &aws.Config{
+			Region:   aws.String(dynamoRegion),
+			Endpoint: aws.String(dynamoURL),
+		}
+
+		sess := session.Must(session.NewSession(config))
+		dynamosession = sess
+
+		log.Info("Successfully connected to ", dynamoURL, " in ", dynamoRegion, " region")
+
 	}
-
-	dynamoRegion := os.Getenv("DYNAMO_REGION")
-	if dynamoRegion == "" {
-		dynamoRegion = "us-east-1"
-		log.Warn("WARNING: no dynamo_region in the environment. Defaulting to ", dynamoURL)
-	}
-
-	config := &aws.Config{
-		Region:   aws.String(dynamoRegion),
-		Endpoint: aws.String(dynamoURL),
-	}
-
-	sess := session.Must(session.NewSession(config))
-
-	svc := dynamodb.New(sess)
-
-	log.Info("Successfully connected to ", dynamoURL, " in ", dynamoRegion, " region")
 	// fmt.Println(reflect.TypeOf(svc))
 
+	svc := dynamodb.New(dynamosession)
 	return svc
+}
+
+/**
+* Checks to make sure a DynamoDB table exists
+ */
+func CheckTableExists(tableName string) bool {
+	svc := GetDb()
+	input := &dynamodb.DescribeTableInput{
+		TableName: aws.String(tableName),
+	}
+	_, err := svc.DescribeTable(input)
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeResourceNotFoundException:
+				break // this is expected and means table doesn't exist
+			default:
+				log.Error(err.Error()) // something unexpected happened
+			}
+		}
+	} else {
+		return true
+	}
+	return false
+
+}
+
+func provisionedCapacity() (int64, int64) {
+
+	readCapacity := os.Getenv("DYNAMO_READ_CAPACITY")
+	if readCapacity == "" {
+		readCapacity = "100" // default
+	}
+
+	writeCapacity := os.Getenv("DYNAMO_WRITE_CAPACITY")
+	if writeCapacity == "" {
+		writeCapacity = "100" // default
+	}
+
+	iRead, err := strconv.ParseInt(readCapacity, 10, 64)
+	if err != nil {
+		iRead = 100 // default
+	}
+
+	iWrite, err := strconv.ParseInt(writeCapacity, 10, 64)
+	if err != nil {
+		iWrite = 100 // default
+	}
+
+	return iRead, iWrite
+
+}
+
+/**
+* CreateEventsTable creatses events table if it doesn't exist. Returns "false" if
+* an error occurs
+ */
+func CreateEventsTable() {
+	tableName := EventsTableName
+	svc := GetDb()
+
+	readCapacity, writeCapacity := provisionedCapacity()
+
+	input := &dynamodb.CreateTableInput{
+		AttributeDefinitions: []*dynamodb.AttributeDefinition{
+			{
+				AttributeName: aws.String("eventId"),
+				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("eventType"),
+				AttributeType: aws.String("S"),
+			},
+		},
+		KeySchema: []*dynamodb.KeySchemaElement{
+			{
+				AttributeName: aws.String("eventId"),
+				KeyType:       aws.String("HASH"),
+			},
+		},
+		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+			ReadCapacityUnits:  aws.Int64(readCapacity),
+			WriteCapacityUnits: aws.Int64(writeCapacity),
+		},
+		GlobalSecondaryIndexes: []*dynamodb.GlobalSecondaryIndex{
+			{
+				IndexName: aws.String("EventTypeIndex"),
+				KeySchema: []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("eventType"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("eventId"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType: aws.String("ALL"),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(readCapacity),
+					WriteCapacityUnits: aws.Int64(writeCapacity),
+				},
+			},
+		},
+		TableName: aws.String(tableName),
+	}
+
+	_, err := svc.CreateTable(input)
+	if err != nil {
+		fmt.Println("Got error calling CreateTable:")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println("Created the table", tableName)
 }
 
 func GetAllTables() []string {
