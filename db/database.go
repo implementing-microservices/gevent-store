@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -122,7 +123,9 @@ func provisionedCapacity() (int64, int64) {
 /**
 * SaveEvent() saves a single event to dynamodb.
 */
-func SaveEvent(event interface{}) {
+func SaveEvent(event interface{}, workingGroup *sync.WaitGroup) {
+	defer workingGroup.Done()
+
 	av, err := dynamodbattribute.MarshalMap(event)
 	if err != nil {
 		log.Info("Got error marshalling new event item: ", err.Error())
@@ -137,10 +140,11 @@ func SaveEvent(event interface{}) {
 
     _, err = svc.PutItem(input)
     if err != nil {
-        fmt.Println("Got error calling PutItem:")
-        fmt.Println(err.Error())
-        os.Exit(1)
+        log.Info("Got error calling PutItem: ", err.Error())
 	}
+
+	eventId := event.(map[string]interface{})["eventId"]
+	log.Info("Saved successfully eventId : ", eventId)
 }
 
 

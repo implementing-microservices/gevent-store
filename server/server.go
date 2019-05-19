@@ -43,7 +43,7 @@ func StartServer(serverPort string) {
 
 func getEvents(c *gin.Context) {
 	eventType := c.Param("event_type")
-	dbEvents := events.GetEvents(eventType)
+	dbEvents := events.GetEvents(eventType, "87987")
 	c.String(http.StatusOK, "Response from the event store is: %s", dbEvents)
 }
 
