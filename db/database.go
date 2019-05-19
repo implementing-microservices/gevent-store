@@ -147,6 +147,41 @@ func SaveEvent(event interface{}, workingGroup *sync.WaitGroup) {
 	log.Info("Saved successfully eventId : ", eventId)
 }
 
+func GetEvents(eventType string, since string) []interface{} {
+
+	svc := GetDb()
+
+	params := &dynamodb.QueryInput{
+		TableName: aws.String(EventsTableName),
+		IndexName: aws.String("EventTypeIndex"),
+		// @see: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+		KeyConditionExpression: aws.String("eventType = :desiredEventType AND eventId >= :since "),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":desiredEventType": {
+				S: aws.String(eventType),
+			},
+			":since": {
+				S: aws.String(since),
+			},
+		},
+	}
+
+	response := make([]interface{}, 0)
+
+	// @see: https://docs.aws.amazon.com/sdk-for-go/v1/api/service.dynamodb.QueryOutput.html
+	dbResult, err := svc.Query(params)
+	if err != nil {
+		fmt.Printf("DB Query ERROR: %v\n", err.Error())
+		return response
+	}
+
+	fmt.Println("number of results: ", *dbResult.Count)
+
+	err = dynamodbattribute.UnmarshalListOfMaps(dbResult.Items, &response)
+
+	return response
+	//return response
+}
 
 /**
 * CreateEventsTable creatses events table if it doesn't exist. Returns "false" if

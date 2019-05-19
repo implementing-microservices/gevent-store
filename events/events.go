@@ -11,15 +11,13 @@ import (
 /**
 * Get events
  */
-func GetEvents(eventType string, since string) string {
+func GetEvents(eventType string, since string) []interface{} {
 
-	// svc := db.GetDb()
+	events := db.GetEvents(eventType, since)
 
-	allTables := db.GetAllTables()
+	//log.Info ("db responded with events: ", events)
 
-	log.Info(allTables)
-
-	return "this is db"
+	return events
 }
 
 func SaveEvents(eventType string, payload []byte) string {
@@ -38,6 +36,6 @@ func SaveEvents(eventType string, payload []byte) string {
 	}
 
 	wg.Wait()
-	
+
 	return "this is db response after save"
 }
