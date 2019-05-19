@@ -1,11 +1,8 @@
 version: '3.4'
 
 services:
-  ms-demo-golang:
-    container_name: ms-demo-golang
-    labels:
-      - "traefik.backend=ms-demo-golang"
-      - "traefik.frontend.rule=PathPrefixStrip: /demogo"
+  ms-gevent-api:
+    container_name: ms-gevent-api
     user: root # avoids ton of volume mounting headaches in dev mode.
     build: 
       context: .
@@ -13,11 +10,36 @@ services:
     volumes:
       - .:/app
     ports:
-      - 3737
-      # - 3738 # health check endpoint
+      - 3535
     environment:
       - APP_ENV=development
-    command: reflex -c reflex.conf
+      - API_PORT=3535
+    env_file:
+      - ./database-dev.env
+    links:
+      - ms-gevents-db
+    command: ./wait-for.sh -t 60 ms-gevents-db:8000 -- reflex -c reflex.conf
 
-# @see: https://github.com/pilu/fresh
-# @alt @see: https://github.com/codegangsta/gin
+  # https://hub.docker.com/r/amazon/dynamodb-local/ 
+  # Test the database from host:   
+  # > aws dynamodb list-tables --endpoint-url http://localhost:8248
+  ms-gevents-db:
+    container_name: ms-gevents-db
+    image: amazon/dynamodb-local
+    expose:
+      - 8000
+    ports: # for debugging only. Nor necessary
+      - 8242:8000
+    environment:
+      - ./Djava.library.path=./DynamoDBLocal_lib
+    volumes:
+      - ms_gevents_db_data:/home/dynamodblocal/data
+    working_dir: /home/dynamodblocal
+    # note: data folder gets created as "root" so dynamodblocal can't use it
+    # if you need to mount it to a volume, you need to run as root
+    user: root
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+    restart: always
+
+volumes:
+  ms_gevents_db_data:

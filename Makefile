@@ -1,6 +1,6 @@
 default: start
-project:=ms-workspace-demo
-service:=ms-demo-golang
+project:=event-store-in-go
+service:=ms-gevent-api
 COMMIT_HASH = $(shell git rev-parse --verify HEAD)
 
 .PHONY: start
