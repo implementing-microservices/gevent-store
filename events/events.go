@@ -4,7 +4,7 @@ import (
 	"app/db"
 	"encoding/json"
 	"sync"
-	
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,5 +37,7 @@ func SaveEvents(eventType string, payload []byte) string {
 		go db.SaveEvent(event, &wg)
 	}
 
+	wg.Wait()
+	
 	return "this is db response after save"
 }
