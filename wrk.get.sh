@@ -1,3 +1,3 @@
 #! /usr/bin/env bash
 
-wrk -t10 -c400 -d10s http://0.0.0.0:5000/events/kukuu?since=12106650-4e49-47bd-b93a-0b59a7217497
+wrk -t50 -c100 -d20s http://0.0.0.0:5353/events/mytransactions?since=0a05e510-12ee-47b1-a7a7-2e4259d24809

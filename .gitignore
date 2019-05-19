@@ -19,3 +19,5 @@ vendor
 # if you un-ignore vendor, uningore this, as well
 Gopkg.lock 
 vendor.orig
+
+database-aws.env
