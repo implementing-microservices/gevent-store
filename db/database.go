@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -117,6 +118,31 @@ func provisionedCapacity() (int64, int64) {
 	return iRead, iWrite
 
 }
+
+/**
+* SaveEvent() saves a single event to dynamodb.
+*/
+func SaveEvent(event interface{}) {
+	av, err := dynamodbattribute.MarshalMap(event)
+	if err != nil {
+		log.Info("Got error marshalling new event item: ", err.Error())
+	}
+
+	input := &dynamodb.PutItemInput{
+        Item:      av,
+        TableName: aws.String(EventsTableName),
+    }
+
+	svc := GetDb()
+
+    _, err = svc.PutItem(input)
+    if err != nil {
+        fmt.Println("Got error calling PutItem:")
+        fmt.Println(err.Error())
+        os.Exit(1)
+	}
+}
+
 
 /**
 * CreateEventsTable creatses events table if it doesn't exist. Returns "false" if

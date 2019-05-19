@@ -35,6 +35,8 @@ func StartServer(serverPort string) {
 	// @app.route('/events/<event_type>', methods=['GET'])
 	router.GET("/events/:event_type", getEvents)
 
+	router.POST("/events/:event_type", postEvents)
+
 	router.Run(":" + serverPort)
 
 }
@@ -43,6 +45,19 @@ func getEvents(c *gin.Context) {
 	eventType := c.Param("event_type")
 	dbEvents := events.GetEvents(eventType)
 	c.String(http.StatusOK, "Response from the event store is: %s", dbEvents)
+}
+
+func postEvents(c *gin.Context) {
+	rawBody, err := c.GetRawData()
+
+	if err != nil {
+		log.Error(err.Error())
+	}
+
+	eventType := c.Param("event_type")
+	saveStatus := events.SaveEvents(eventType, rawBody)
+
+	c.String(http.StatusOK, "Response from the event store is: %s", saveStatus)
 }
 
 // Simple exit if error, to avoid putting same 4 lines of code in too many places
