@@ -180,16 +180,17 @@ func getSeqIdbyEventId(eventId string, eventType string) string {
 	return seqId
 }
 
-func GetEvents(eventType string, since string) []interface{} {
+func GetEvents(eventType string, since string, limit int64) []interface{} {
 
 	seqId := getSeqIdbyEventId(since, eventType)
-	log.Info("seqID: ", seqId)
+	//log.Debug("seqID: ", seqId)
 
 	svc := GetDb()
 
 	params := &dynamodb.QueryInput{
 		TableName: aws.String(EventsTableName),
 		IndexName: aws.String("SequenceIndex"),
+		Limit: aws.Int64(limit),
 		// @see: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
 		KeyConditionExpression: aws.String("eventType = :desiredEventType AND seqId >= :seqId "),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -211,7 +212,7 @@ func GetEvents(eventType string, since string) []interface{} {
 		return response
 	}
 
-	fmt.Println("number of results: ", *dbResult.Count)
+	log.Debug("number of results: ", *dbResult.Count)
 
 	err = dynamodbattribute.UnmarshalListOfMaps(dbResult.Items, &response)
 

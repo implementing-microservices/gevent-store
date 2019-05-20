@@ -12,9 +12,9 @@ import (
 /**
 * Get events
  */
-func GetEvents(eventType string, since string) []interface{} {
+func GetEvents(eventType string, since string, limit int64) []interface{} {
 
-	events := db.GetEvents(eventType, since)
+	events := db.GetEvents(eventType, since, limit)
 
 	//log.Info ("db responded with events: ", events)
 

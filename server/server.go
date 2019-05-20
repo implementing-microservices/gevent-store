@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	gin "github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -44,7 +45,12 @@ func StartServer(serverPort string) {
 func getEvents(c *gin.Context) {
 	eventType := c.Param("event_type")
 	since := c.Query("since")
-	dbEvents := events.GetEvents(eventType, since)
+	count, _ := strconv.ParseInt(c.Query("count"), 10, 64)
+	if count == 0 {
+		count = 100 // default
+	}
+	log.Debug("count: ", count)
+	dbEvents := events.GetEvents(eventType, since, count)
 
 	c.JSON(http.StatusOK, dbEvents)
 }

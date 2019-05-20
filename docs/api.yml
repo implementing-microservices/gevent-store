@@ -134,7 +134,7 @@ paths:
             maximum number of events to return (including the "since" one)  
           in: query
           required: false
-          default: 10
+          default: 100
           schema:
               type: integer
       responses:
