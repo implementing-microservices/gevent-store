@@ -10,7 +10,9 @@ paths:
     post:
       summary: Save New Event(s)
       description: |
-        Saves a new event of a specific type into the event store.
+        Saves new event(s) of specific type into the event store. When saving
+        multiple events, the order in which they were provided is preserved
+        in the event store.
       parameters:
         - name: eventType
           description: type of an event
