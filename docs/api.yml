@@ -140,6 +140,14 @@ paths:
       responses:
         '200':
           description: success returns list of events with details
+          headers:
+                X-Last-EventId:
+                  description: |
+                    eventId of the last event served, to apply in a
+                    subsequent query as a "since" parameter
+                  schema:
+                    type: string
+                  example: "0c2d7c2c-db56-4a7c-9b21-83d972b5db65"
           content:
             application/json:
               schema:
