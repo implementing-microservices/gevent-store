@@ -4,7 +4,7 @@
 a Docker container and is not meant for running code on the host machine
 directly. 
 
-To learn more: [https://justgo.rocks](https://justgo.rocks)
+API Spec: <https://implementing-microservices.github.io/gevent-store/>
 
 ## Quickstart
 
