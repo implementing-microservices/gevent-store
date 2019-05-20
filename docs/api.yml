@@ -1,0 +1,203 @@
+# Open API Spec documentation: https://swagger.io/docs/specification/about/
+openapi: "3.0.0"
+servers:
+  - url: https://api.example.com/v1 
+info:
+  title: Event Store
+  version: 1.0.0
+paths:
+  /events/{eventType}:
+    post:
+      summary: Save New Event(s)
+      description: |
+        Saves a new event of a specific type into the event store.
+      parameters:
+        - name: eventType
+          description: type of an event
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "cart-item-added"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  eventId: 
+                    type: string
+                  data:
+                    type: object 
+              # examples syntax: https://swagger.io/docs/specification/2-0/adding-examples/                    
+              example:
+                - eventId: 6a05e510-12ee-47b1-a7a7-2e4259d24809
+                  data: {
+                    "userId": "0a41c6e5-5ad9-4412-ac5c-fc4cc13e2d6c",
+                    "cartId": "a40ea1f4-b2f0-4904-9a3c-85c27efeca92",
+                    "productId": "5ca94d88036709a43a429a2b",
+                    "numItems": 9,
+                    "pricePerItem": 99.23,
+                    "productOptions": {
+                      "color": "blue"
+                    }
+                  }                    
+                - eventId: 12106650-4e49-47bd-b93a-0b59a7217497
+                  data: {
+                    "userId": "5c564d55-5393-48d4-94f5-0ed3402f2a08",
+                    "cartId": "ed3ffd05-11cd-41c8-ab58-69292f9a0a9f",
+                    "productId": "5ca94e34f7e55570ecb918af",
+                    "numItems": 2,
+                    "pricePerItem": 93.82,
+                    "productOptions": {
+                      "color": "red"
+                    }
+                  }
+              # Example generator:
+              # https://www.json-generator.com/
+              # [
+              #   '{{repeat(1, 3)}}',
+              #   {
+              #     userId: "{{guid()}}",
+              #     cartId: "{{guid()}}",
+              #     productId: "{{objectId()}}",
+              #     numItems: "{{integer(1, 10)}}",
+              #     pricePerItem: "{{floating(10, 100, 2)}}",
+              #     productOptions: {
+              #       color: "white"
+              #     }
+              #   }
+              # ]
+      responses:
+        '200':
+          description: |
+            Returns success status and IDs of the events that were successfully
+            saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventIds:
+                    type: array
+                    items:
+                      type: string
+                    example: 
+                      - "6a05e510-12ee-47b1-a7a7-2e4259d24809"
+                      - "12106650-4e49-47bd-b93a-0b59a7217497"
+        '500': 
+          description: |
+            Returns detailed error explanation in case event store was unable
+            to fulfil the request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorObject'
+        '400':
+          description: |
+            Returns detailed error explanation in case client submitted invalid
+            data to the event store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorObject'
+    get:
+      summary: Get N events since eventId
+      description: |
+        get the event with a specified ID and N-1 additional events after it
+        from a sequential batch of events where all events have the specified
+        eventType type.
+      parameters:
+        - name: eventType
+          description: type of the events
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "cart-item-added"
+        - name: since
+          description: |
+            the eventId of the event to be the first event in the 
+            batch of events returned. Events are ordered chronologically.
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "af04e7c0-1a57-44bc-81a4-d8b3fd0f0f56"
+        - name: count
+          description: |
+            maximum number of events to return (including the "since" one)  
+          in: query
+          required: false
+          default: 10
+          schema:
+              type: integer
+      responses:
+        '200':
+          description: success returns list of events with details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties: 
+                    eventId: 
+                      type: string
+                    data:
+                      type: object 
+                # examples syntax: https://swagger.io/docs/specification/2-0/adding-examples/                    
+                example:
+                  - eventId: af04e7c0-1a57-44bc-81a4-d8b3fd0f0f56
+                    data: {
+                      "userId": "a1d5b69e-aefb-4a39-ae5c-affbe6961d60",
+                      "cartId": "9f0bbc6a-f199-4238-91f5-15215c0971fe",
+                      "productId": "5ca95c1b5eb664a11584f8cd",
+                      "numItems": 6,
+                      "pricePerItem": 81.13,
+                      "productOptions": {
+                        "color": "white"
+                      }
+                    }
+                  - eventId: b91fbd5f-37fc-471b-bec2-51ba71dcd5b1
+                    data: {
+                      "userId": "a1d5b69e-aefb-4a39-ae5c-affbe6961d60",
+                      "cartId": "9f0bbc6a-f199-4238-91f5-15215c0971fe",
+                      "productId": "5ca95c1b67a5ef0359e44f41",
+                      "numItems": 2,
+                      "pricePerItem": 29.97,
+                      "productOptions": {
+                        "color": "green"
+                      }
+                    }
+                  - eventId: 2226266b-da97-4854-899d-d42bcdde3ecf
+                    data: {
+                      "userId": "aa942873-e4e5-44f3-b0f9-ce39f2dfe8bd",
+                      "cartId": "d62135eb-148b-4e0a-ba3b-03152ba77e4e",
+                      "productId": "5ca95c1b35997aeb54dfc471",
+                      "numItems": 7,
+                      "price": 56.22,
+                      "productOptions": {
+                        "color": "white"
+                      }
+                    }
+
+
+components:
+  schemas:
+    ErrorObject:
+      type: object
+      properties:
+        errorId:
+          type: integer
+        description:
+          type: string
+        details:
+          type: string
+      example:
+        errorId: 2345
+        description: "Could not connect to database"
+        details: "Please contact sysadmin"
