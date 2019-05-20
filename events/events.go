@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 )
 
 /**
@@ -29,7 +30,12 @@ func SaveEvents(eventType string, payload []byte) string {
 	wg.Add(len(events))
 	
 	for _, event := range events { 
+		
 		event["eventType"] = eventType
+		
+		u1 := uuid.Must(uuid.NewUUID())
+		event["seqId"] = u1.String()
+
 		//log.Info("event : ", event)
 		log.Info("Saving eventId : ", event["eventId"])
 		go db.SaveEvent(event, &wg)

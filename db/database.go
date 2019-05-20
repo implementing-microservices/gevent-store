@@ -147,21 +147,57 @@ func SaveEvent(event interface{}, workingGroup *sync.WaitGroup) {
 	log.Info("Saved successfully eventId : ", eventId)
 }
 
+func getSeqIdbyEventId(eventId string, eventType string) string {
+	svc := GetDb()
+
+	params := &dynamodb.QueryInput{
+		TableName: aws.String(EventsTableName),
+		IndexName: aws.String("EventIdIndex"),
+
+		KeyConditionExpression: aws.String("eventType = :desiredEventType AND eventId = :eventId "),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":desiredEventType": {
+				S: aws.String(eventType),
+			},
+			":eventId": {
+				S: aws.String(eventId),
+			},
+		},
+	}
+
+	// @see: https://docs.aws.amazon.com/sdk-for-go/v1/api/service.dynamodb.QueryOutput.html
+	dbResult, err := svc.Query(params)
+	if err != nil {
+		fmt.Printf("DB Query ERROR: %v\n", err.Error())
+		return ""
+	}
+
+	response := make([]interface{}, 0)
+	err = dynamodbattribute.UnmarshalListOfMaps(dbResult.Items, &response)
+
+	seqId := response[0].(map[string]interface{})["seqId"].(string)
+	//log.Info("my responses: ", seqId)
+	return seqId
+}
+
 func GetEvents(eventType string, since string) []interface{} {
+
+	seqId := getSeqIdbyEventId(since, eventType)
+	log.Info("seqID: ", seqId)
 
 	svc := GetDb()
 
 	params := &dynamodb.QueryInput{
 		TableName: aws.String(EventsTableName),
-		IndexName: aws.String("EventTypeIndex"),
+		IndexName: aws.String("SequenceIndex"),
 		// @see: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
-		KeyConditionExpression: aws.String("eventType = :desiredEventType AND eventId >= :since "),
+		KeyConditionExpression: aws.String("eventType = :desiredEventType AND seqId >= :seqId "),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":desiredEventType": {
 				S: aws.String(eventType),
 			},
-			":since": {
-				S: aws.String(since),
+			":seqId": {
+				S: aws.String(seqId),
 			},
 		},
 	}
@@ -180,7 +216,6 @@ func GetEvents(eventType string, since string) []interface{} {
 	err = dynamodbattribute.UnmarshalListOfMaps(dbResult.Items, &response)
 
 	return response
-	//return response
 }
 
 /**
@@ -200,15 +235,23 @@ func CreateEventsTable() {
 				AttributeType: aws.String("S"),
 			},
 			{
+				AttributeName: aws.String("seqId"),
+				AttributeType: aws.String("S"),
+			},			
+			{
 				AttributeName: aws.String("eventType"),
 				AttributeType: aws.String("S"),
 			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
-				AttributeName: aws.String("eventId"),
+				AttributeName: aws.String("eventType"),
 				KeyType:       aws.String("HASH"),
 			},
+			{
+				AttributeName: aws.String("eventId"),
+				KeyType:       aws.String("RANGE"),
+			},	
 		},
 		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 			ReadCapacityUnits:  aws.Int64(readCapacity),
@@ -216,7 +259,7 @@ func CreateEventsTable() {
 		},
 		GlobalSecondaryIndexes: []*dynamodb.GlobalSecondaryIndex{
 			{
-				IndexName: aws.String("EventTypeIndex"),
+				IndexName: aws.String("EventIdIndex"),
 				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("eventType"),
@@ -224,6 +267,26 @@ func CreateEventsTable() {
 					},
 					{
 						AttributeName: aws.String("eventId"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType: aws.String("ALL"),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(readCapacity),
+					WriteCapacityUnits: aws.Int64(writeCapacity),
+				},
+			},
+			{
+				IndexName: aws.String("SequenceIndex"),
+				KeySchema: []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("eventType"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("seqId"),
 						KeyType:       aws.String("RANGE"),
 					},
 				},
@@ -249,6 +312,9 @@ func CreateEventsTable() {
 	fmt.Println("Created the table", tableName)
 }
 
+/**
+* GetAllTables() gets all tables
+*/
 func GetAllTables() []string {
 
 	svc := GetDb()
