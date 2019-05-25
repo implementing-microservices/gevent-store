@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"bytes"
 
 	gin "github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 )
 
 func init() {
@@ -50,9 +52,65 @@ func getEvents(c *gin.Context) {
 		count = 100 // default
 	}
 	log.Debug("count: ", count)
+
+	errors := validateGetEvents(count, since, eventType)
+	if len(errors) > 0 {
+		respondWithErrors(c, errors)
+		return
+	}
+
 	dbEvents := events.GetEvents(eventType, since, count)
 
 	c.JSON(http.StatusOK, dbEvents)
+}
+
+/**
+* Returns true if validation passes, false otherwise
+*/
+func validateGetEvents(count int64, since string , eventType string) []string {
+	errors := []string{}
+	
+	if (count < 1){
+		newErr := "The `count` parameter must be a positive integer, greater than 0"
+		errors = append(errors, newErr)
+	}
+
+	_, err := uuid.Parse(since)
+    if (err != nil) {
+		newErr := "The `since` parameter must be a valid UUID string"
+		errors = append(errors, newErr)
+	}
+
+	if (len(eventType) < 2) {
+		newErr := "The `eventType` must be a valid string representing even type. Min 2 characters."
+		errors = append(errors, newErr)
+	}
+
+	return errors
+}
+
+/**
+* HTTP response with errors
+*/
+func respondWithErrors(c *gin.Context, errors []string) {
+	c.Header("Content-Type", "application/json; charset=utf-8")
+
+	var b bytes.Buffer
+
+	for _, err := range errors {
+		b.WriteString(err)
+		b.WriteString(".\n ")
+	}
+
+	summaryError := b.String()
+	log.Info(summaryError)
+	_ = summaryError
+
+	c.JSON(http.StatusBadRequest, gin.H{
+		"errors" : errors,
+		"summary":  summaryError,		
+		//"status": http.StatusBadRequest,
+	})
 }
 
 func postEvents(c *gin.Context) {
