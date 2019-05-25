@@ -22,6 +22,10 @@ logs:
 ps: 
 	docker-compose -p ${project} ps
 
+.PHONY: test
+test: 
+	docker-compose -p ${project} exec ${service} go test -coverprofile cp.out ./...
+
 .PHONY: shell
 shell: 
 	docker-compose -p ${project} exec ${service} sh

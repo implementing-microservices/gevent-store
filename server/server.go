@@ -108,7 +108,7 @@ func respondWithErrors(c *gin.Context, errors []string) {
 	}
 
 	summaryError := b.String()
-	log.Info(summaryError)
+	log.Debug(summaryError)
 	_ = summaryError
 
 	c.JSON(http.StatusBadRequest, gin.H{

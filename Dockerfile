@@ -19,6 +19,7 @@ USER root
 RUN adduser -s /bin/false -D ${APP_USER} \
  && echo "Installing git and bash support" \
  && apk update && apk upgrade \
+ && apk add build-base \
  && apk add --no-cache bash git \
  && echo "Installing code hot reloader" \
  && go get -u github.com/cespare/reflex \
@@ -26,14 +27,11 @@ RUN adduser -s /bin/false -D ${APP_USER} \
  && go mod verify \
  && echo "Fixing permissions..." \
  && chown -R ${APP_USER}:${APP_USER} ${GOPATH} \
- && chown -R ${APP_USER}:${APP_USER} ${SRC_PATH} \
- && echo "Cleaning up installation caches to reduce image size" \
- && rm -rf /root/src /tmp/* /usr/share/man /var/cache/apk/*
+ && chown -R ${APP_USER}:${APP_USER} ${SRC_PATH} 
 
 USER ${APP_USER}
 
 EXPOSE ${PORT}
-
 
 FROM scratch as release
 ENV APP_ENV=production
