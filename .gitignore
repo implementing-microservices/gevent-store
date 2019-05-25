@@ -20,4 +20,5 @@ vendor
 Gopkg.lock 
 vendor.orig
 
+go.sum
 database-aws.env
