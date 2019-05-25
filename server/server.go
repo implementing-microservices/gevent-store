@@ -31,17 +31,22 @@ func init() {
  */
 func StartServer(serverPort string) {
 
-	// Creates a gin router with default middleware:
-	// logger and recovery (crash-free) middleware
-	router := gin.Default()
-
-	// @app.route('/events/<event_type>', methods=['GET'])
-	router.GET("/events/:event_type", getEvents)
-
-	router.POST("/events/:event_type", postEvents)
-
+	router := setupRouter()	
 	router.Run(":" + serverPort)
 
+}
+
+/** 
+* Creates a gin router with default middleware:
+* logger and recovery (crash-free) middleware
+*/
+func setupRouter() *gin.Engine {
+	router := gin.Default()
+
+	router.GET("/events/:event_type", getEvents)
+	router.POST("/events/:event_type", postEvents)
+
+	return router
 }
 
 func getEvents(c *gin.Context) {
