@@ -153,6 +153,7 @@ func getSeqIdbyEventId(eventId string, eventType string) string {
 	params := &dynamodb.QueryInput{
 		TableName: aws.String(EventsTableName),
 		IndexName: aws.String("EventIdIndex"),
+		Limit: aws.Int64(int64(1)),
 
 		KeyConditionExpression: aws.String("eventType = :desiredEventType AND eventId = :eventId "),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -174,6 +175,10 @@ func getSeqIdbyEventId(eventId string, eventType string) string {
 
 	response := make([]interface{}, 0)
 	err = dynamodbattribute.UnmarshalListOfMaps(dbResult.Items, &response)
+	
+	if len(response) == 0 {
+		return ""
+	}
 
 	seqId := response[0].(map[string]interface{})["seqId"].(string)
 	//log.Info("my responses: ", seqId)
@@ -182,8 +187,13 @@ func getSeqIdbyEventId(eventId string, eventType string) string {
 
 func GetEvents(eventType string, since string, limit int64) []interface{} {
 
+	response := make([]interface{}, 0)
+	
 	seqId := getSeqIdbyEventId(since, eventType)
 	//log.Debug("seqID: ", seqId)
+	if (seqId == "") { // could not find such eventId
+		return response
+	}
 
 	svc := GetDb()
 
@@ -202,8 +212,6 @@ func GetEvents(eventType string, since string, limit int64) []interface{} {
 			},
 		},
 	}
-
-	response := make([]interface{}, 0)
 
 	// @see: https://docs.aws.amazon.com/sdk-for-go/v1/api/service.dynamodb.QueryOutput.html
 	dbResult, err := svc.Query(params)
