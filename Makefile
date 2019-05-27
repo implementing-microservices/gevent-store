@@ -57,3 +57,7 @@ build-release:
 run-release:
 	docker run -d --name ${service}_${COMMIT_HASH} -p :3737 local/${service}:${COMMIT_HASH} /main
 	docker logs -f ${service}_${COMMIT_HASH}
+
+.PHONY: db-local-items
+db-local-items:
+	aws dynamodb scan --table-name events --endpoint-url http://0.0.0.0:8242
